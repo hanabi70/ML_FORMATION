@@ -87,5 +87,6 @@ jobs:
         environment_name: ${{ env.EB_ENVIRONMENT_NAME }}
         region: ${{ env.AWS_REGION }}
         deployment_package: Dockerrun.aws.json
+        version_label: v${{ github.run_number }}-${{ github.sha }}
         wait_for_deployment: true
   
