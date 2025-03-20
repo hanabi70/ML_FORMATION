@@ -2,3 +2,4 @@
 *.lock
 *.pyc
 .ruff_cache
+credentials

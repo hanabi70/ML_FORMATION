@@ -10,6 +10,13 @@ env:
   AWS_REGION: eu-west-3  # Région AWS (à ajuster selon vos besoins)
   ECR_REPOSITORY: churn-prediction  # Nom du repository ECR
   IMAGE_TAG: ${{ github.sha }}
+  ECS_SERVICE: churn-prediction-service                 # set this to your Amazon ECS service name
+  ECS_CLUSTER: churn-prediction-cluster                 # set this to your Amazon ECS cluster name
+  ECS_TASK_DEFINITION: .aws/task-definition.json # set this to the path to your Amazon ECS task definition                                # file, e.g. .aws/task-definition.json
+  CONTAINER_NAME: churn-prediction
+
+permissions:
+  contents: read
 
 jobs:
   train-and-test:
@@ -41,7 +48,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
     
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -55,6 +63,7 @@ jobs:
       uses: aws-actions/amazon-ecr-login@v2
     
     - name: Build, tag, and push image to Amazon ECR
+      id: build-push
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       run: |
@@ -62,3 +71,20 @@ jobs:
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest 
+
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: ${{ env.ECS_TASK_DEFINITION }}
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-push.outputs.image }}
+  
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+  
