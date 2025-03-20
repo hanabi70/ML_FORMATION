@@ -62,7 +62,7 @@ jobs:
 
     - name: Install ebcli
       run: |
-        uv add awsebcli
+        pip install awsebcli
 
     - name: Deploy to Elastic Beanstalk
       run: |
