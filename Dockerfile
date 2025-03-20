@@ -10,6 +10,7 @@ WORKDIR /app
 # Copier uniquement les fichiers nécessaires
 COPY app.py .
 COPY train.py .
+COPY tests /tests
 COPY templates/ templates/
 COPY data/ data/
 COPY pyproject.toml .
