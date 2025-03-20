@@ -37,10 +37,10 @@ jobs:
         uv sync --frozen
     
     - name: Train model
-      run: python train.py
+      run: uv run train.py
     
     - name: Run tests
-      run: pytest
+      run: uv run pytest
 
   build-and-push:
     needs: train-and-test
