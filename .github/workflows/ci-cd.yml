@@ -66,6 +66,6 @@ jobs:
 
     - name: Deploy to Elastic Beanstalk
       run: |
-        eb init ${{ env.EB_APPLICATION_NAME }} --region ${{ env.AWS_REGION }} --platform "Docker running on 64bit Amazon Linux 2023"
+        eb init ${{ env.EB_APPLICATION_NAME }} --region ${{ env.AWS_REGION }} --platform docker
         eb deploy ${{ env.EB_ENVIRONMENT_NAME }} --label ${{ github.sha }}
   
