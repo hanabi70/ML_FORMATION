@@ -9,7 +9,7 @@ on:
 env:
   AWS_REGION: eu-west-1
   EB_APPLICATION_NAME: churn-prediction
-  EB_ENVIRONMENT_NAME: churn-prediction-demo
+  EB_ENVIRONMENT_NAME: Churn-prediction-env
   IMAGE_NAME: churn-prediction
 
 permissions:
