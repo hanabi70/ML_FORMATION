@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: eu-north-1
+  AWS_REGION: eu-west-1
   EB_APPLICATION_NAME: churn-prediction
   EB_ENVIRONMENT_NAME: churn-prediction-demo
   IMAGE_NAME: churn-prediction
