@@ -11,6 +11,7 @@ WORKDIR /app
 COPY app.py .
 COPY train.py .
 COPY templates/ templates/
+COPY data/ data/
 COPY pyproject.toml .
 COPY uv.lock .
 
