@@ -20,7 +20,7 @@ COPY uv.lock .
 RUN uv sync --frozen --no-install-project
 
 # Exposer le port si nécessaire (à ajuster selon votre application)
-EXPOSE 8000
+EXPOSE 5000
 
 # Commande pour exécuter l'application
 CMD ["uv", "run", "app.py"] 
