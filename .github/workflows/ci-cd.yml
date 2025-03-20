@@ -7,13 +7,11 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: eu-west-3  # Région AWS (à ajuster selon vos besoins)
+  AWS_REGION: eu-north-1  # Région AWS (à ajuster selon vos besoins)
   ECR_REPOSITORY: churn-prediction  # Nom du repository ECR
   IMAGE_TAG: ${{ github.sha }}
-  ECS_SERVICE: churn-prediction-service                 # set this to your Amazon ECS service name
-  ECS_CLUSTER: churn-prediction-cluster                 # set this to your Amazon ECS cluster name
-  ECS_TASK_DEFINITION: .aws/task-definition.json # set this to the path to your Amazon ECS task definition                                # file, e.g. .aws/task-definition.json
-  CONTAINER_NAME: churn-prediction
+  EB_APPLICATION_NAME: churn-prediction  # Nom de votre application Elastic Beanstalk
+  EB_ENVIRONMENT_NAME: churn-prediction-demo  # Nom de votre environnement Elastic Beanstalk
 
 permissions:
   contents: read
@@ -70,21 +68,32 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest 
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-    - name: Fill in the new image ID in the Amazon ECS task definition
-      id: task-def
-      uses: aws-actions/amazon-ecs-render-task-definition@v1
+    - name: Generate Dockerrun.aws.json
+      run: |
+        echo '{
+          "AWSEBDockerrunVersion": "1",
+          "Image": {
+            "Name": "${{ steps.build-push.outputs.image }}",
+            "Update": "true"
+          },
+          "Ports": [
+            {
+              "ContainerPort": 8000,
+              "HostPort": 8000
+            }
+          ]
+        }' > Dockerrun.aws.json
+
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v21
       with:
-        task-definition: ${{ env.ECS_TASK_DEFINITION }}
-        container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-push.outputs.image }}
-  
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: ${{ env.ECS_SERVICE }}
-        cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: ${{ env.EB_APPLICATION_NAME }}
+        environment_name: ${{ env.EB_ENVIRONMENT_NAME }}
+        region: ${{ env.AWS_REGION }}
+        deployment_package: Dockerrun.aws.json
+        wait_for_deployment: true
   
