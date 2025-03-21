@@ -1,47 +1,183 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prédiction de Churn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #198754;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            background-color: var(--bs-body-bg);
+            transition: background-color 0.3s ease;
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
         .result-box {
             display: none;
             margin-top: 20px;
             padding: 20px;
-            border-radius: 8px;
-            background-color: #f8f9fa;
+            border-radius: 12px;
+            background-color: var(--bs-body-bg);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.5s ease;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .form-check {
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: var(--bs-body-bg);
+            transition: background-color 0.3s ease;
+        }
+
+        .form-check:hover {
+            background-color: var(--bs-secondary-bg);
+        }
+
+        .form-control {
+            border-radius: 8px;
+            border: 2px solid var(--bs-border-color);
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #0b5ed7;
+            transform: translateY(-2px);
+        }
+
+        .prediction-badge {
+            font-size: 1.2rem;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 10px 0;
+        }
+
+        .probability-bar {
+            height: 20px;
+            border-radius: 10px;
+            background-color: var(--bs-secondary-bg);
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 1s ease;
+        }
+
+        .theme-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .tooltip {
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading-spinner {
+            width: 3rem;
+            height: 3rem;
         }
     </style>
 </head>
 <body>
+    <div class="theme-switch">
+        <button class="btn btn-outline-primary" id="themeToggle">
+            <i class="bi bi-moon-stars"></i>
+        </button>
+    </div>
+
     <div class="container mt-5">
-        <h1 class="mb-4">Prédiction de Churn</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="text-center mb-0">
+                <i class="bi bi-graph-up-arrow me-2"></i>
+                Prédiction de Churn
+            </h1>
+            <button class="btn btn-outline-primary" id="monitoringBtn">
+                <i class="bi bi-speedometer2 me-2"></i>
+                Monitoring
+            </button>
+        </div>
         
         <div class="row">
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Sélectionnez les variables</h5>
+                        <h5 class="card-title">
+                            <i class="bi bi-sliders me-2"></i>
+                            Sélectionnez les variables
+                        </h5>
                         <form id="predictionForm">
-                            {% for var in variables %}
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="{{ var }}" id="{{ var }}" name="selected_vars">
-                                <label class="form-check-label" for="{{ var }}">
-                                    {{ var }}
-                                </label>
-                            </div>
-                            {% endfor %}
-                            
                             <div id="inputFields" class="mt-3">
-                                <!-- Les champs de saisie seront ajoutés ici dynamiquement -->
+                                {% for var in variables %}
+                                <div class="mb-3">
+                                    <label for="{{ var }}" class="form-label">{{ var }}</label>
+                                    <input type="number" class="form-control" id="{{ var }}" name="{{ var }}" required>
+                                    <div class="invalid-feedback">
+                                        Veuillez entrer une valeur valide
+                                    </div>
+                                </div>
+                                {% endfor %}
                             </div>
                             
-                            <button type="submit" class="btn btn-primary mt-3">Prédire</button>
+                            <div class="loading">
+                                <div class="spinner-border loading-spinner text-primary" role="status">
+                                    <span class="visually-hidden">Chargement...</span>
+                                </div>
+                                <p class="mt-2">Calcul de la prédiction en cours...</p>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary mt-3 w-100">
+                                <i class="bi bi-calculator me-2"></i>
+                                Prédire
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -49,44 +185,111 @@
             
             <div class="col-md-6">
                 <div id="resultBox" class="result-box">
-                    <h5>Résultats de la prédiction</h5>
-                    <p>Prédiction: <span id="prediction"></span></p>
-                    <p>Probabilité de churn: <span id="probability"></span></p>
-                    <p>Variables utilisées: <span id="usedVars"></span></p>
+                    <h5 class="mb-4">
+                        <i class="bi bi-clipboard-data me-2"></i>
+                        Résultats de la prédiction
+                    </h5>
+                    
+                    <div class="text-center mb-4">
+                        <div class="prediction-badge" id="predictionBadge"></div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Probabilité de churn</h6>
+                        <div class="probability-bar">
+                            <div class="probability-fill" id="probabilityBar"></div>
+                        </div>
+                        <div class="text-end">
+                            <span id="probability"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>Variables utilisées</h6>
+                        <div class="d-flex flex-wrap gap-2" id="usedVars"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Monitoring -->
+        <div class="row mt-4" id="monitoringSection" style="display: none;">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-graph-up me-2"></i>
+                            Appels API par minute
+                        </h5>
+                        <div id="api-calls-graph"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-pie-chart me-2"></i>
+                            Distribution des churns
+                        </h5>
+                        <div id="churn-graph"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        const inputFields = document.getElementById('inputFields');
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                updateInputFields();
-            });
+        // Initialisation des tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+
+        // Gestion du thème sombre/clair
+        const themeToggle = document.getElementById('themeToggle');
+        const html = document.documentElement;
         
-        function updateInputFields() {
-            inputFields.innerHTML = '';
-            checkboxes.forEach(checkbox => {
-                if (checkbox.checked) {
-                    const div = document.createElement('div');
-                    div.className = 'mb-3';
-                    div.innerHTML = `
-                        <label for="${checkbox.value}" class="form-label">${checkbox.value}</label>
-                        <input type="number" class="form-control" id="${checkbox.value}_input" name="${checkbox.value}" required>
-                    `;
-                    inputFields.appendChild(div);
-                }
-            });
-        }
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-bs-theme', newTheme);
+            themeToggle.innerHTML = newTheme === 'light' ? 
+                '<i class="bi bi-moon-stars"></i>' : 
+                '<i class="bi bi-sun"></i>';
+        });
+
+        const inputFields = document.getElementById('inputFields');
         
         document.getElementById('predictionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
+            const loading = document.querySelector('.loading');
+            const submitButton = this.querySelector('button[type="submit"]');
+            
+            // Récupérer toutes les variables sélectionnées
+            const selectedVars = [];
+            const inputs = this.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                if (input.value) {
+                    selectedVars.push(input.name);
+                    formData.append('selected_vars', input.name);
+                }
+            });
+
+            // Validation du formulaire
+            if (selectedVars.length === 0) {
+                alert('Veuillez remplir au moins un champ');
+                return;
+            }
+
+            // Désactiver le bouton et afficher le chargement
+            submitButton.disabled = true;
+            loading.style.display = 'block';
             
             try {
                 const response = await fetch('/predict', {
@@ -97,16 +300,96 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    document.getElementById('resultBox').style.display = 'block';
-                    document.getElementById('prediction').textContent = data.prediction ? 'Churn' : 'Non-Churn';
-                    document.getElementById('probability').textContent = `${(data.probability * 100).toFixed(2)}%`;
-                    document.getElementById('usedVars').textContent = data.selected_vars.join(', ');
+                    const resultBox = document.getElementById('resultBox');
+                    const predictionBadge = document.getElementById('predictionBadge');
+                    const probabilityBar = document.getElementById('probabilityBar');
+                    const probability = document.getElementById('probability');
+                    const usedVars = document.getElementById('usedVars');
+                    
+                    // Afficher la boîte de résultats avec animation
+                    resultBox.style.display = 'block';
+                    
+                    // Mettre à jour la prédiction avec un badge coloré
+                    predictionBadge.className = `prediction-badge badge ${data.prediction ? 'bg-danger' : 'bg-success'}`;
+                    predictionBadge.textContent = data.prediction ? 'Churn' : 'Non-Churn';
+                    
+                    // Mettre à jour la barre de probabilité
+                    const probabilityValue = (data.probability * 100).toFixed(2);
+                    probabilityBar.style.width = `${probabilityValue}%`;
+                    probability.textContent = `${probabilityValue}%`;
+                    
+                    // Mettre à jour les variables utilisées
+                    usedVars.innerHTML = data.selected_vars.map(function(variable) {
+                        return `<span class="badge bg-secondary">${variable}</span>`;
+                    }).join('');
                 } else {
                     alert(data.error);
                 }
             } catch (error) {
                 alert('Erreur lors de la prédiction');
                 console.error(error);
+            } finally {
+                // Réactiver le bouton et cacher le chargement
+                submitButton.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        // Gestion du monitoring
+        const monitoringBtn = document.getElementById('monitoringBtn');
+        const monitoringSection = document.getElementById('monitoringSection');
+        let monitoringVisible = false;
+
+        monitoringBtn.addEventListener('click', async () => {
+            monitoringVisible = !monitoringVisible;
+            monitoringSection.style.display = monitoringVisible ? 'flex' : 'none';
+            
+            if (monitoringVisible) {
+                try {
+                    const response = await fetch('/get_graphs_data');
+                    const data = await response.json();
+                    
+                    if (data.api_calls) {
+                        const apiCallsTrace = {
+                            x: data.api_calls.map(d => d.minute),
+                            y: data.api_calls.map(d => d.count),
+                            type: 'scatter',
+                            mode: 'lines+markers',
+                            name: 'Appels API'
+                        };
+                        
+                        const apiCallsLayout = {
+                            title: 'Appels API par minute',
+                            xaxis: { title: 'Temps' },
+                            yaxis: { title: 'Nombre d\'appels' },
+                            showlegend: true
+                        };
+                        
+                        Plotly.newPlot('api-calls-graph', [apiCallsTrace], apiCallsLayout);
+                    }
+                    
+                    if (data.churn_data) {
+                        const churnTrace = {
+                            labels: data.churn_data.map(d => d.Status),
+                            values: data.churn_data.map(d => d.Count),
+                            type: 'pie',
+                            hole: 0.4,
+                            marker: {
+                                colors: ['#198754', '#dc3545']
+                            }
+                        };
+                        
+                        const churnLayout = {
+                            title: 'Distribution des churns',
+                            showlegend: true
+                        };
+                        
+                        Plotly.newPlot('churn-graph', [churnTrace], churnLayout);
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du chargement des graphiques:', error);
+                    alert('Erreur lors du chargement des graphiques');
+                }
             }
         });
     </script>
