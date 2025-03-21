@@ -1,239 +1,99 @@
 <!DOCTYPE html>
-<html lang="fr" data-bs-theme="light">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prédiction de Churn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary-color: #0d6efd;
-            --success-color: #198754;
-            --danger-color: #dc3545;
-        }
-
         body {
-            background-color: var(--bs-body-bg);
-            transition: background-color 0.3s ease;
+            background-color: #f8f9fa;
         }
-
-        .card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        .result-box {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
-            border-radius: 12px;
-            background-color: var(--bs-body-bg);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .form-check {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            background-color: var(--bs-body-bg);
-            transition: background-color 0.3s ease;
-        }
-
-        .form-check:hover {
-            background-color: var(--bs-secondary-bg);
-        }
-
-        .form-control {
-            border-radius: 8px;
-            border: 2px solid var(--bs-border-color);
-            padding: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-
-        .btn {
-            border-radius: 8px;
-            padding: 10px 20px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            border: none;
-        }
-
-        .btn-primary:hover {
-            background-color: #0b5ed7;
-            transform: translateY(-2px);
-        }
-
-        .prediction-badge {
-            font-size: 1.2rem;
-            padding: 8px 16px;
-            border-radius: 20px;
-            margin: 10px 0;
-        }
-
-        .probability-bar {
-            height: 20px;
+        .prediction-card {
+            background-color: white;
             border-radius: 10px;
-            background-color: var(--bs-secondary-bg);
-            overflow: hidden;
-            margin: 10px 0;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-top: 2rem;
         }
-
-        .probability-fill {
-            height: 100%;
-            background-color: var(--primary-color);
-            transition: width 1s ease;
+        .result-card {
+            display: none;
+            margin-top: 1rem;
         }
-
-        .theme-switch {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-
-        .tooltip {
-            font-size: 0.9rem;
-        }
-
         .loading {
             display: none;
-            text-align: center;
-            margin: 20px 0;
         }
-
-        .loading-spinner {
-            width: 3rem;
-            height: 3rem;
+        .chart-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            padding: 1rem;
+            margin-top: 2rem;
         }
     </style>
 </head>
 <body>
-    <div class="theme-switch">
-        <button class="btn btn-outline-primary" id="themeToggle">
-            <i class="bi bi-moon-stars"></i>
-        </button>
-    </div>
-
-    <div class="container mt-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="text-center mb-0">
-                <i class="bi bi-graph-up-arrow me-2"></i>
-                Prédiction de Churn
-            </h1>
-            <button class="btn btn-outline-primary" id="monitoringBtn">
-                <i class="bi bi-speedometer2 me-2"></i>
-                Monitoring
-            </button>
-        </div>
+    <div class="container py-5">
+        <h1 class="text-center mb-4">Prédiction de Churn</h1>
         
         <div class="row">
             <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-sliders me-2"></i>
-                            Sélectionnez les variables
-                        </h5>
-                        <form id="predictionForm">
-                            <div id="inputFields" class="mt-3">
-                                {% for var in variables %}
-                                <div class="mb-3">
-                                    <label for="{{ var }}" class="form-label">{{ var }}</label>
-                                    <input type="number" class="form-control" id="{{ var }}" name="{{ var }}" required>
-                                    <div class="invalid-feedback">
-                                        Veuillez entrer une valeur valide
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            
-                            <div class="loading">
-                                <div class="spinner-border loading-spinner text-primary" role="status">
-                                    <span class="visually-hidden">Chargement...</span>
-                                </div>
-                                <p class="mt-2">Calcul de la prédiction en cours...</p>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary mt-3 w-100">
-                                <i class="bi bi-calculator me-2"></i>
-                                Prédire
-                            </button>
-                        </form>
-                    </div>
+                <div class="chart-container">
+                    <h3 class="text-center mb-3">Appels API par Endpoint</h3>
+                    <canvas id="apiCallsChart"></canvas>
                 </div>
             </div>
-            
             <div class="col-md-6">
-                <div id="resultBox" class="result-box">
-                    <h5 class="mb-4">
-                        <i class="bi bi-clipboard-data me-2"></i>
-                        Résultats de la prédiction
-                    </h5>
-                    
-                    <div class="text-center mb-4">
-                        <div class="prediction-badge" id="predictionBadge"></div>
-                    </div>
-
-                    <div class="mb-4">
-                        <h6>Probabilité de churn</h6>
-                        <div class="probability-bar">
-                            <div class="probability-fill" id="probabilityBar"></div>
-                        </div>
-                        <div class="text-end">
-                            <span id="probability"></span>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <h6>Variables utilisées</h6>
-                        <div class="d-flex flex-wrap gap-2" id="usedVars"></div>
-                    </div>
+                <div class="chart-container">
+                    <h3 class="text-center mb-3">Proportion de Churn</h3>
+                    <canvas id="churnChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Section Monitoring -->
-        <div class="row mt-4" id="monitoringSection" style="display: none;">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-graph-up me-2"></i>
-                            Appels API par minute
-                        </h5>
-                        <div id="api-calls-graph"></div>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="prediction-card">
+                    <form id="predictionForm">
+                        <div class="mb-3">
+                            <label for="Age" class="form-label">Âge</label>
+                            <input type="number" class="form-control" id="Age" name="Age" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="Years" class="form-label">Années d'expérience</label>
+                            <input type="number" class="form-control" id="Years" name="Years" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="Num_Sites" class="form-label">Nombre de sites</label>
+                            <input type="number" class="form-control" id="Num_Sites" name="Num_Sites" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="Account_Manager" class="form-label">Account Manager</label>
+                            <select class="form-select" id="Account_Manager" name="Account_Manager" required>
+                                <option value="">Sélectionnez une option</option>
+                                <option value="1">Oui</option>
+                                <option value="0">Non</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Prédire</button>
+                    </form>
+                    
+                    <div class="loading text-center mt-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="bi bi-pie-chart me-2"></i>
-                            Distribution des churns
-                        </h5>
-                        <div id="churn-graph"></div>
+                    
+                    <div class="result-card">
+                        <div class="alert" role="alert"></div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -241,55 +101,116 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script>
-        // Initialisation des tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        // Initialisation des graphiques
+        const apiCallsCtx = document.getElementById('apiCallsChart').getContext('2d');
+        const churnCtx = document.getElementById('churnChart').getContext('2d');
+
+        const apiCallsChart = new Chart(apiCallsCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre d\'appels'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Temps'
+                        }
+                    }
+                }
+            }
         });
 
-        // Gestion du thème sombre/clair
-        const themeToggle = document.getElementById('themeToggle');
-        const html = document.documentElement;
-        
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = html.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-bs-theme', newTheme);
-            themeToggle.innerHTML = newTheme === 'light' ? 
-                '<i class="bi bi-moon-stars"></i>' : 
-                '<i class="bi bi-sun"></i>';
+        const churnChart = new Chart(churnCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Non Churn', 'Churn'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#28a745', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de clients'
+                        }
+                    }
+                }
+            }
         });
 
-        const inputFields = document.getElementById('inputFields');
+        // Fonction pour mettre à jour les graphiques
+        async function updateCharts() {
+            try {
+                const response = await fetch('/get_graphs_data');
+                const data = await response.json();
+                
+                // Mise à jour du graphique des appels API
+                if (data.api_calls) {
+                    const endpoints = [...new Set(data.api_calls.map(item => item.endpoint))];
+                    const timestamps = [...new Set(data.api_calls.map(item => item.minute))];
+                    
+                    apiCallsChart.data.labels = timestamps;
+                    apiCallsChart.data.datasets = endpoints.map(endpoint => ({
+                        label: endpoint,
+                        data: timestamps.map(timestamp => {
+                            const matchingCall = data.api_calls.find(
+                                call => call.endpoint === endpoint && call.minute === timestamp
+                            );
+                            return matchingCall ? matchingCall.count : 0;
+                        }),
+                        borderColor: endpoint === 'home' ? '#007bff' : '#28a745',
+                        tension: 0.1
+                    }));
+                }
+                
+                // Mise à jour du graphique de churn
+                if (data.churn_data) {
+                    churnChart.data.datasets[0].data = data.churn_data.map(item => item.Count);
+                }
+                
+                apiCallsChart.update();
+                churnChart.update();
+            } catch (error) {
+                console.error('Erreur lors de la mise à jour des graphiques:', error);
+            }
+        }
+
+        // Mise à jour initiale des graphiques
+        updateCharts();
         
-        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+        // Mise à jour périodique des graphiques toutes les 5 secondes
+        setInterval(updateCharts, 5000);
+
+        // Gestion du formulaire de prédiction
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = new FormData(this);
+            const form = e.target;
+            const formData = new FormData(form);
             const loading = document.querySelector('.loading');
-            const submitButton = this.querySelector('button[type="submit"]');
+            const resultCard = document.querySelector('.result-card');
+            const alert = resultCard.querySelector('.alert');
+            const progressBar = resultCard.querySelector('.progress-bar');
             
-            // Récupérer toutes les variables sélectionnées
-            const selectedVars = [];
-            const inputs = this.querySelectorAll('input[type="number"]');
-            inputs.forEach(input => {
-                if (input.value) {
-                    selectedVars.push(input.name);
-                    formData.append('selected_vars', input.name);
-                }
-            });
-
-            // Validation du formulaire
-            if (selectedVars.length === 0) {
-                alert('Veuillez remplir au moins un champ');
-                return;
-            }
-
-            // Désactiver le bouton et afficher le chargement
-            submitButton.disabled = true;
             loading.style.display = 'block';
+            resultCard.style.display = 'none';
             
             try {
                 const response = await fetch('/predict', {
@@ -300,98 +221,31 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    const resultBox = document.getElementById('resultBox');
-                    const predictionBadge = document.getElementById('predictionBadge');
-                    const probabilityBar = document.getElementById('probabilityBar');
-                    const probability = document.getElementById('probability');
-                    const usedVars = document.getElementById('usedVars');
+                    const probability = data.probability * 100;
+                    const prediction = data.prediction;
                     
-                    // Afficher la boîte de résultats avec animation
-                    resultBox.style.display = 'block';
+                    alert.className = `alert alert-${prediction ? 'danger' : 'success'}`;
+                    alert.textContent = `Prédiction: ${prediction ? 'Churn probable' : 'Non-churn probable'}`;
                     
-                    // Mettre à jour la prédiction avec un badge coloré
-                    predictionBadge.className = `prediction-badge badge ${data.prediction ? 'bg-danger' : 'bg-success'}`;
-                    predictionBadge.textContent = data.prediction ? 'Churn' : 'Non-Churn';
+                    progressBar.style.width = `${probability}%`;
+                    progressBar.className = `progress-bar bg-${prediction ? 'danger' : 'success'}`;
+                    progressBar.textContent = `${probability.toFixed(1)}%`;
                     
-                    // Mettre à jour la barre de probabilité
-                    const probabilityValue = (data.probability * 100).toFixed(2);
-                    probabilityBar.style.width = `${probabilityValue}%`;
-                    probability.textContent = `${probabilityValue}%`;
+                    resultCard.style.display = 'block';
                     
-                    // Mettre à jour les variables utilisées
-                    usedVars.innerHTML = data.selected_vars.map(function(variable) {
-                        return `<span class="badge bg-secondary">${variable}</span>`;
-                    }).join('');
+                    // Mise à jour immédiate des graphiques après une prédiction
+                    updateCharts();
                 } else {
-                    alert(data.error);
+                    throw new Error(data.error || 'Une erreur est survenue');
                 }
             } catch (error) {
-                alert('Erreur lors de la prédiction');
-                console.error(error);
+                alert.className = 'alert alert-danger';
+                alert.textContent = error.message;
+                resultCard.style.display = 'block';
             } finally {
-                // Réactiver le bouton et cacher le chargement
-                submitButton.disabled = false;
                 loading.style.display = 'none';
-            }
-        });
-
-        // Gestion du monitoring
-        const monitoringBtn = document.getElementById('monitoringBtn');
-        const monitoringSection = document.getElementById('monitoringSection');
-        let monitoringVisible = false;
-
-        monitoringBtn.addEventListener('click', async () => {
-            monitoringVisible = !monitoringVisible;
-            monitoringSection.style.display = monitoringVisible ? 'flex' : 'none';
-            
-            if (monitoringVisible) {
-                try {
-                    const response = await fetch('/get_graphs_data');
-                    const data = await response.json();
-                    
-                    if (data.api_calls) {
-                        const apiCallsTrace = {
-                            x: data.api_calls.map(d => d.minute),
-                            y: data.api_calls.map(d => d.count),
-                            type: 'scatter',
-                            mode: 'lines+markers',
-                            name: 'Appels API'
-                        };
-                        
-                        const apiCallsLayout = {
-                            title: 'Appels API par minute',
-                            xaxis: { title: 'Temps' },
-                            yaxis: { title: 'Nombre d\'appels' },
-                            showlegend: true
-                        };
-                        
-                        Plotly.newPlot('api-calls-graph', [apiCallsTrace], apiCallsLayout);
-                    }
-                    
-                    if (data.churn_data) {
-                        const churnTrace = {
-                            labels: data.churn_data.map(d => d.Status),
-                            values: data.churn_data.map(d => d.Count),
-                            type: 'pie',
-                            hole: 0.4,
-                            marker: {
-                                colors: ['#198754', '#dc3545']
-                            }
-                        };
-                        
-                        const churnLayout = {
-                            title: 'Distribution des churns',
-                            showlegend: true
-                        };
-                        
-                        Plotly.newPlot('churn-graph', [churnTrace], churnLayout);
-                    }
-                } catch (error) {
-                    console.error('Erreur lors du chargement des graphiques:', error);
-                    alert('Erreur lors du chargement des graphiques');
-                }
             }
         });
     </script>
 </body>
-</html> 
+</html>

@@ -1,15 +1,14 @@
 from flask import Flask, request, render_template, jsonify
 import joblib
 import pandas as pd
-from prometheus_client import Summary, Counter
+from prometheus_client import Counter
 from datetime import datetime
-import logging
+# import logging
 
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
 
 
-REQUEST_TIME = Summary('request_processing_seconds', 'Time spent processing request')
 API_CALLS = Counter('api_calls_total', 'Total number of API calls', ['endpoint'])
 
 # Liste pour stocker les appels API avec leur timestamp
@@ -51,7 +50,6 @@ def get_graphs_data():
         'churn_data': churn_data
     })
 
-@REQUEST_TIME.time()
 @app.route('/predict', methods=['POST'])
 def predict():
     API_CALLS.labels(endpoint='predict').inc()
